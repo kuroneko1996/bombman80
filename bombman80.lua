@@ -12,6 +12,8 @@ SCREEN_WIDTH=240 --px
 SCREEN_HEIGHT=136
 FONT_HEIGHT=12 --font height
 TRANSPARENT_OBSTACLE=500 --sprite index
+GROUND_TILE=34
+TCOLOR=5 --transparent color index
 
 --bombs qualities
 MAX_BOMBS=4
@@ -45,7 +47,7 @@ function dstr(x,y)
 	local cx=x//8
 	local cy=y//8
 	local idx=mget(x//8,y//8)
-	if idx==0 then
+	if idx==GROUND_TILE then
 		return true
 	elseif breakables[idx] then
 		clear_map(cx,cy,2,2)
@@ -56,7 +58,7 @@ function dstr(x,y)
 end
 
 function is_empty(x,y)
-	return mget(x//8,y//8)==0
+	return mget(x//8,y//8)==GROUND_TILE
 end
 
 --randomize a table
@@ -102,10 +104,10 @@ end
 player.draw=function(self)
 	if self.invincible>0 then
 		if self.invincible%24==0 then
-			spr(256,self.x,self.y,0,1,0,0,2,2)
+			spr(256,self.x,self.y,TCOLOR,1,0,0,2,2)
 		end
 	else
-		spr(256,self.x,self.y,0,1,0,0,2,2)
+		spr(256,self.x,self.y,TCOLOR,1,0,0,2,2)
 	end
 	--rectb(self.x+self.box.left,self.y+self.box.top,self.box.w,self.box.h,5)
 end
@@ -158,7 +160,7 @@ Bomb={
 	
 	draw=function(self)
 		if self.state==0 then
-			spr(258,self.x,self.y,0,1,0,0,2,2)
+			spr(258,self.x,self.y,TCOLOR,1,0,0,2,2)
 		elseif self.state==1 then
 			for _,s in ipairs(self.explosions) do
 				spr(s.s,s.x,s.y,0,2)
@@ -225,7 +227,7 @@ Bomb={
 Bomb.mt.__index=Bomb
 
 function place_bomb(x,y,range)
-	if player.bombs>0 and mget(x//8,y//8)==0 and not(has_entities(x,y)) then
+	if player.bombs>0 and mget(x//8,y//8)==GROUND_TILE and not(has_entities(x,y)) then
 		if player:take_bomb() then
 			local bomb=Bomb.place(x,y,range)
 			local cx=x//8
@@ -267,7 +269,7 @@ Bonus={
 		end
 	end,
 	update=function(self,dt)
-		if self.visible==false and mget(self.x//8,self.y//8)==0 then
+		if self.visible==false and mget(self.x//8,self.y//8)==GROUND_TILE then
 			self.visible=true
 		end
 		if self.visible and rect_col(player.rect, self.rect) then
@@ -473,7 +475,7 @@ end
 function clear_map(dc,dr,w,h)
 	for r=0,h-1 do
 		for c=0,w-1 do
-			mset(dc+c,dr+r,0)
+			mset(dc+c,dr+r,GROUND_TILE)
 		end
 	end
 end
