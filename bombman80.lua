@@ -13,8 +13,6 @@ SCREEN_HEIGHT=136
 FONT_HEIGHT=12 --font height
 TRANSPARENT_OBSTACLE=500 --sprite index
 
-START_X=16 --player starting coordinates
-START_Y=80
 --bombs qualities
 MAX_BOMBS=4
 MAX_RANGE=4
@@ -22,18 +20,22 @@ MAX_RANGE=4
 game={state="init",level=1,menu_index=1,high_scores={},door={}}
 game.high_scores={LUI="10000",MARIA="2500",NOX="1300",AAA="150",JJJ="2400"}
 
-tiles={}
-tiles[2]=2
-tiles[3]=2
-tiles[18]=2
-tiles[19]=2
-
-sols={2,3,4,5,6,7,18,19,20,21,22,23}
+solids_start=64
+solids_end=96-1
 solids={}
-for _,v in ipairs(sols) do solids[v]=true end
+for i=solids_start,solids_end do solids[i]=true end
+
+
+breaks={66,67,82,83}
+breakables={}
+for _,v in ipairs(breaks) do breakables[v]=true end
 
 function is_solid(x,y)
 	return solids[mget(x//8,y//8)]
+end
+
+function is_breakable(x,y)
+	return breakables[mget(x//8,y//8)]
 end
 
 DOOR_SPR=032
@@ -45,12 +47,9 @@ function dstr(x,y)
 	local idx=mget(x//8,y//8)
 	if idx==0 then
 		return true
-	elseif tiles[idx]==2 then
-		mset(cx,cy,0)
+	elseif breakables[idx] then
+		clear_map(cx,cy,2,2)
 		show_bonuses(cx,cy)
-		mset(cx+1,cy,0)
-		mset(cx,cy+1,0)
-		mset(cx+1,cy+1,0)
 		return true
 	end
 	return false
@@ -71,7 +70,7 @@ function shuffle(tbl)
 end
 
 player={
-	x=START_X,y=START_Y,dx=0,dy=0,spd=1,
+	x=0,y=0,dx=0,dy=0,spd=1,
 	box={left=0,top=0,w=16,h=16},
 	rect={x1=0,y1=0,x2=0,y2=0},
 	lives=3,
@@ -232,10 +231,6 @@ function place_bomb(x,y,range)
 			local cx=x//8
 			local cy=y//8
 			bombs[#bombs+1]=bomb
-			--mset(cx,cy,500)
-			--mset(cx+1,cy,500)
-			--mset(cx,cy+1,500)
-			--mset(cx+1,cy+1,500)
 		end
 	end
 end
@@ -302,7 +297,7 @@ function add_bonuses()
 	local d_tiles={}
 	for x=0,COLS-1,2 do
 		for y=0,ROWS-1,2 do
-			if tiles[mget(x,y)]==2 then
+			if breakables[mget(x,y)] then
 				table.insert(d_tiles,{x=x*8,y=y*8})
 			end
 		end
@@ -375,10 +370,11 @@ function draw_gui()
 	if game.state=="over" then
 		print("GAME OVER", SCREEN_WIDTH//2-24,SCREEN_HEIGHT//2-10)
 	end
-	print("BOMBMAN 80",84,116)
+	local title="BOMBMAN 80"
+	print(title,(SCREEN_WIDTH-text_width(title))//2,116)
 	print("LIVES "..player.lives,8,128)
 	--print("LOC "..string.format("%0.1f",player.x)..", "..string.format("%0.1f",player.y),148,128)
-	print("BOMBS "..player.bombs.."/"..player.max_bombs,148,128)
+	print("BOMBS "..player.bombs.."/"..player.max_bombs,174,128)
 end
 
 function has_entities(x,y)
@@ -455,22 +451,29 @@ end
 function load_level(number)
 	load_map(number)
 	add_bonuses()
-	player.x=16
-	player.y=ROWS*8-64+TSIZE//2
+	for r=0,ROWS-1 do
+		for c=0,COLS-1 do
+			if mget(c,r)==2 then
+				player.x=c*8
+				player.y=r*8
+				clear_map(c,r,2,2)
+			end
+		end
+	end
 end
 
 function load_map(number)
-	clear_map()
+	clear_map(0,0,COLS,ROWS)
 	local sc=COLS*number
-	local sr=0
+	local sr=(number//8)*ROWS
 
 	copy_map(sc,sr,0,0,COLS,ROWS)
 end
 
-function clear_map()
-	for r=0,ROWS-1 do
-		for c=0,COLS-1 do
-			mset(c,r,0)
+function clear_map(dc,dr,w,h)
+	for r=0,h-1 do
+		for c=0,w-1 do
+			mset(dc+c,dr+r,0)
 		end
 	end
 end
@@ -481,7 +484,6 @@ function copy_map(sc,sr,dc,dr,w,h)
 			mset(dc+c,dr+r,mget(sc+c,sr+r))
 		end
 	end
-
 end
 
 function init()
