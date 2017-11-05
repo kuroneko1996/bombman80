@@ -5,21 +5,21 @@
 
 dt=0
 pt=0
-TSIZE=16
+TSIZE=16 --tile size
 COLS=30
 ROWS=17
-SCREEN_WIDTH=240
+SCREEN_WIDTH=240 --px
 SCREEN_HEIGHT=136
 FONT_HEIGHT=12 --font height
 TRANSPARENT_OBSTACLE=500 --sprite index
 
-START_X=16
+START_X=16 --player starting coordinates
 START_Y=80
 --bombs qualities
 MAX_BOMBS=4
 MAX_RANGE=4
 
-game={state="init",menu_index=1,high_scores={}}
+game={state="init",level=1,menu_index=1,high_scores={},door={}}
 game.high_scores={LUI="10000",MARIA="2500",NOX="1300",AAA="150",JJJ="2400"}
 
 tiles={}
@@ -27,6 +27,16 @@ tiles[2]=2
 tiles[3]=2
 tiles[18]=2
 tiles[19]=2
+
+sols={2,3,4,5,6,7,18,19,20,21,22,23}
+solids={}
+for _,v in ipairs(sols) do solids[v]=true end
+
+function is_solid(x,y)
+	return solids[mget(x//8,y//8)]
+end
+
+DOOR_SPR=032
 
 --destroys tiles
 function dstr(x,y)
@@ -287,6 +297,7 @@ Bonus={
 Bonus.mt.__index=Bonus
 
 function add_bonuses()
+	bonuses={}
 	trace("adding bonuses")
 	local d_tiles={}
 	for x=0,COLS-1,2 do
@@ -340,7 +351,7 @@ function collision(o,dir,box)
 	
 	for j=starty,endy do
 		for i=startx,endx do
-			if mget(i,j)~=0 then
+			if is_solid(i*c,j*8) then
 				if dir==0 then
 					if o.dx>0 then o.x=i*c-box.w-box.left end
 					if o.dx<0 then o.x=i*c+c-box.left end
@@ -442,7 +453,35 @@ function draw_high_scores()
 end
 
 function load_level(number)
+	load_map(number)
 	add_bonuses()
+	player.x=16
+	player.y=ROWS*8-64+TSIZE//2
+end
+
+function load_map(number)
+	clear_map()
+	local sc=COLS*number
+	local sr=0
+
+	copy_map(sc,sr,0,0,COLS,ROWS)
+end
+
+function clear_map()
+	for r=0,ROWS-1 do
+		for c=0,COLS-1 do
+			mset(c,r,0)
+		end
+	end
+end
+
+function copy_map(sc,sr,dc,dr,w,h)
+	for r=0,h-1 do
+		for c=0,w-1 do
+			mset(dc+c,dr+r,mget(sc+c,sr+r))
+		end
+	end
+
 end
 
 function init()
@@ -490,10 +529,15 @@ function TIC()
 		p:draw()
 
 		draw_gui()
+
+		if mget(player.x//8,player.y//8)==DOOR_SPR then
+			game.state="start"
+			game.level=game.level+1
+		end
 	elseif game.state=="menu" then
 		draw_menu()
 	elseif game.state=="start" then
-		load_level(1)
+		load_level(game.level)
 		game.state="playing"
 	elseif game.state=="over" then
 	elseif game.state=="high_scores" then
