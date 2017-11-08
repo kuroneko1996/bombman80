@@ -84,19 +84,19 @@ player={
 
 player.update=function(self,dt)
 	self.x=self.x+self.dx
-	local sy=collision(self,0,self.box)
+	local colx=collision(self,0,self.box)
 	
 	self.y=self.y+self.dy
-	local sx=collision(self,1,self.box)
+	local coly=collision(self,1,self.box)
 
 	local should_slide=true
 	if self.dx~=0 and self.dy~=0 then should_slide=false end
+
+	--sliding
+	if should_slide then self:slide(colx,coly) end
+	
 	self.dx=0
 	self.dy=0
-	
-	--sliding
-	if should_slide then self:slide(sx,sy) end
-	
 	self.rect.x1=self.box.left+self.x
 	self.rect.y1=self.box.top+self.y
 	self.rect.x2=self.box.left+self.box.w+self.x
@@ -107,7 +107,38 @@ player.update=function(self,dt)
 	end
 end
 
-player.slide=function(self,sx,sy)
+player.slide=function(self,colx,coly)
+	local sx=0
+	local sy=0
+
+	if self.dx>0 then
+		if colx[2] and not(colx[4]) then
+			sy=1
+		elseif not(colx[2]) and colx[4] then
+			sy=-1
+		end
+	elseif self.dx<0 then
+		if colx[1] and not(colx[3]) then
+			sy=1
+		elseif not(colx[1]) and colx[3] then
+			sy=-1
+		end
+	end
+
+	if self.dy>0 then
+		if coly[3] and not(coly[4]) then
+			sx=1
+		elseif not(coly[3]) and coly[4] then
+			sx=-1
+		end
+	elseif self.dy<0 then
+		if coly[1] and not(coly[2]) then
+			sx=1
+		elseif not(coly[1]) and coly[2] then
+			sx=-1
+		end
+	end
+
 	if sx~=0 then
 		self.dx=sx
 		self.x=self.x+self.dx
@@ -387,38 +418,7 @@ function collision(o,dir,box)
 		end
 	end
 
-	--calculate and return sliding
-	if dir==0 then
-		if o.dx>0 then
-			if cols[2] and not(cols[4]) then
-				return 1
-			elseif not(cols[2]) and cols[4] then
-				return -1
-			end
-		elseif o.dx<0 then
-			if cols[1] and not(cols[3]) then
-				return 1
-			elseif not(cols[1]) and cols[3] then
-				return -1
-			end
-		end
-	else
-		if o.dy>0 then
-			if cols[3] and not(cols[4]) then
-				return 1
-			elseif not(cols[3]) and cols[4] then
-				return -1
-			end
-		elseif o.dy<0 then
-			if cols[1] and not(cols[2]) then
-				return 1
-			elseif not(cols[1]) and cols[2] then
-				return -1
-			end
-		end
-	end
-
-	return 0
+	return cols
 end
 
 function rect_col(a,b)
