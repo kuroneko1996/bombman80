@@ -84,13 +84,19 @@ player={
 
 player.update=function(self,dt)
 	self.x=self.x+self.dx
-	collision(self,0,self.box)
+	local sy=collision(self,0,self.box)
 	
 	self.y=self.y+self.dy
-	collision(self,1,self.box)
-	
+	local sx=collision(self,1,self.box)
+
+	local should_slide=true
+	if self.dx~=0 and self.dy~=0 then should_slide=false end
 	self.dx=0
 	self.dy=0
+	
+	--sliding
+	if should_slide then self:slide(sx,sy) end
+	
 	self.rect.x1=self.box.left+self.x
 	self.rect.y1=self.box.top+self.y
 	self.rect.x2=self.box.left+self.box.w+self.x
@@ -98,6 +104,20 @@ player.update=function(self,dt)
 
 	if self.invincible>0 then
 		self.invincible=self.invincible-1
+	end
+end
+
+player.slide=function(self,sx,sy)
+	if sx~=0 then
+		self.dx=sx
+		self.x=self.x+self.dx
+		collision(self,0,self.box)
+		self.dx=0
+	elseif sy~=0 then
+		self.dy=sy
+		self.y=self.y+self.dy
+		collision(self,1,self.box)
+		self.dy=0
 	end
 end
 
@@ -109,7 +129,7 @@ player.draw=function(self)
 	else
 		spr(256,self.x,self.y,TCOLOR,1,0,0,2,2)
 	end
-	--rectb(self.x+self.box.left,self.y+self.box.top,self.box.w,self.box.h,5)
+	--rectb(self.x+self.box.left,self.y+self.box.top,self.box.w,self.box.h,15)
 end
 
 player.add_bomb=function(self)
@@ -340,15 +360,21 @@ function show_bonuses(cx,cy)
 end
 
 function collision(o,dir,box)
-	local c=8
+	local c=16 --tilesize
 	local startx=(o.x+o.box.left)//c
 	local endx=(o.x+o.box.left+box.w-1)//c
 	local starty=(o.y+box.top)//c
 	local endy=(o.y+box.top+box.h-1)//c
+
+	local cn=0 --corner number
+	local cols={[1]=false,[2]=false,[3]=false,[4]=false}
 	
 	for j=starty,endy do
 		for i=startx,endx do
-			if is_solid(i*c,j*8) then
+			cn=cn+1
+			--trace(cn..":"..i..","..j)
+			
+			if is_solid(i*c,j*c) then
 				if dir==0 then
 					if o.dx>0 then o.x=i*c-box.w-box.left end
 					if o.dx<0 then o.x=i*c+c-box.left end
@@ -356,9 +382,43 @@ function collision(o,dir,box)
 					if o.dy>0 then o.y=j*c-box.h-box.top end
 					if o.dy<0 then o.y=j*c+c-box.top end
 				end
+				cols[cn]=true
 			end
 		end
 	end
+
+	--calculate and return sliding
+	if dir==0 then
+		if o.dx>0 then
+			if cols[2] and not(cols[4]) then
+				return 1
+			elseif not(cols[2]) and cols[4] then
+				return -1
+			end
+		elseif o.dx<0 then
+			if cols[1] and not(cols[3]) then
+				return 1
+			elseif not(cols[1]) and cols[3] then
+				return -1
+			end
+		end
+	else
+		if o.dy>0 then
+			if cols[3] and not(cols[4]) then
+				return 1
+			elseif not(cols[3]) and cols[4] then
+				return -1
+			end
+		elseif o.dy<0 then
+			if cols[1] and not(cols[2]) then
+				return 1
+			elseif not(cols[1]) and cols[2] then
+				return -1
+			end
+		end
+	end
+
+	return 0
 end
 
 function rect_col(a,b)
