@@ -51,7 +51,7 @@ function dstr(x,y)
 		return true
 	elseif breakables[idx] then
 		clear_map(cx,cy,2,2)
-		show_bonuses(cx,cy)
+		show_upgrades(cx,cy)
 		return true
 	end
 	return false
@@ -301,8 +301,8 @@ function update_bombs(dt)
 	end
 end
 
-bonuses={}
-Bonus={
+upgrades={}
+Upgrade={
 	mt={},
 	new=function(newx,newy,type)
 		local b={ x=newx,y=newy,rect={x1=newx,y1=newy,x2=newx+TSIZE,y2=newy+TSIZE},visible=false,consumed=false,type=type }
@@ -311,7 +311,7 @@ Bonus={
 		elseif type=="range" then
 			b.s=292
 		end
-		setmetatable(b,Bonus.mt)
+		setmetatable(b,Upgrade.mt)
 		return b
 	end,
 	draw=function(self)
@@ -324,7 +324,7 @@ Bonus={
 			self.visible=true
 		end
 		if self.visible and rect_col(player.rect, self.rect) then
-			trace("picked up a bonus!")
+			trace("picked up an upgrade!")
 			if self.type=="number" then
 				player.max_bombs=player.max_bombs+1
 				if player.max_bombs>MAX_BOMBS then
@@ -342,11 +342,11 @@ Bonus={
 		end
 	end,
 }
-Bonus.mt.__index=Bonus
+Upgrade.mt.__index=Upgrade
 
-function add_bonuses()
-	bonuses={}
-	trace("adding bonuses")
+function add_upgrades()
+	upgrades={}
+	trace("adding upgrades")
 	local d_tiles={}
 	for x=0,COLS-1,2 do
 		for y=0,ROWS-1,2 do
@@ -356,35 +356,35 @@ function add_bonuses()
 		end
 	end
 	d_tiles = shuffle(d_tiles)
-	place_bonus("number",3,3,d_tiles)
-	place_bonus("range",3,3,d_tiles)
+	place_upgrade("number",3,3,d_tiles)
+	place_upgrade("range",3,3,d_tiles)
 end
 
-function place_bonus(type,min,max,d_tiles)
+function place_upgrade(type,min,max,d_tiles)
 	local cnt=math.random(min,max)
 	for i=1,cnt do
 		if i > #d_tiles then break end
-		local bonus = Bonus.new(d_tiles[i].x,d_tiles[i].y,type)
-		table.insert(bonuses,bonus)
+		local upgrade = Upgrade.new(d_tiles[i].x,d_tiles[i].y,type)
+		table.insert(upgrades,upgrade)
 		table.remove(d_tiles,i)
 	end
 end
 
-function update_bonuses(dt)
-	for i=#bonuses,1,-1 do
-		if bonuses[i].consumed then
-			table.remove(bonuses,i)
+function update_upgrades(dt)
+	for i=#upgrades,1,-1 do
+		if upgrades[i].consumed then
+			table.remove(upgrades,i)
 		else
-			bonuses[i]:update(dt)
+			upgrades[i]:update(dt)
 		end
 	end
 end
 
-function show_bonuses(cx,cy)
-	for _,bonus in ipairs(bonuses) do
-		if bonus.visible==false then
-			if bonus.x==cx//8 and bonus.y==cy//8 then
-				bonus.visible=true
+function show_upgrades(cx,cy)
+	for _,upgrade in ipairs(upgrades) do
+		if upgrade.visible==false then
+			if upgrade.x==cx//8 and upgrade.y==cy//8 then
+				upgrade.visible=true
 			end
 		end
 	end
@@ -510,9 +510,24 @@ function draw_high_scores()
 	end
 end
 
+function draw_settings()
+  cls(0)
+  local title="SETTINGS"
+  local desc="Nothing here"
+  local anykey="press x key to return"
+  print(title,(SCREEN_WIDTH-text_width(title))//2, 0)
+  print(desc,(SCREEN_WIDTH-text_width(desc))//2, SCREEN_HEIGHT//2-16)
+	print(anykey,(SCREEN_WIDTH-text_width(anykey))//2, SCREEN_HEIGHT-24)
+  
+  if btnp(5) then
+    game.state="menu"
+    return
+  end
+end
+
 function load_level(number)
 	load_map(number)
-	add_bonuses()
+	add_upgrades()
 	for r=0,ROWS-1 do
 		for c=0,COLS-1 do
 			if mget(c,r)==2 then
@@ -576,7 +591,7 @@ function TIC()
 		--update
 		p:update(dt)
 		update_bombs(dt)
-		update_bonuses(dt)
+		update_upgrades(dt)
 
 		--draw
 		cls(13)
@@ -586,8 +601,8 @@ function TIC()
 			bomb:draw()
 		end
 
-		for _,bonus in ipairs(bonuses) do
-			bonus:draw()
+		for _,upgrade in ipairs(upgrades) do
+			upgrade:draw()
 		end
 		
 		p:draw()
@@ -600,6 +615,8 @@ function TIC()
 		end
 	elseif game.state=="menu" then
 		draw_menu()
+  elseif game.state=="settings" then
+    draw_settings()
 	elseif game.state=="start" then
 		load_level(game.level)
 		game.state="playing"
