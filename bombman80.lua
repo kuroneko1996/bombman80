@@ -12,7 +12,7 @@ SCREEN_WIDTH=240 --px
 SCREEN_HEIGHT=136
 FONT_HEIGHT=12 --font height
 TRANSPARENT_OBSTACLE=500 --sprite index
-GROUND_TILE=34
+GROUND_TILE={34,35,50,51}
 TCOLOR=5 --transparent color index
 
 --bombs qualities
@@ -47,9 +47,7 @@ function dstr(x,y)
 	local cx=x//8
 	local cy=y//8
 	local idx=mget(x//8,y//8)
-	if idx==GROUND_TILE then
-		return true
-	elseif breakables[idx] then
+	if breakables[idx] then
 		clear_map(cx,cy,2,2)
 		show_upgrades(cx,cy)
 		return true
@@ -58,7 +56,7 @@ function dstr(x,y)
 end
 
 function is_empty(x,y)
-	return mget(x//8,y//8)==GROUND_TILE
+	return mget(x//8,y//8)==GROUND_TILE[1]
 end
 
 --randomize a table
@@ -245,16 +243,16 @@ Bomb={
 		function chain(x,y,s)
 			local empty=is_empty(x,y)
 			local broken=dstr(x,y)==true
-		 if broken then
+      if empty or broken then
 				self:add_explosion(s,x,y)
 			end
-			return not(empty or broken)
+			return empty
 		end
 		
 		---[-1,1]
 		for s=-1,1,2 do
 			for x=1,self.range do
-				if chain(self.x+x*TSIZE*s,self.y,288) then
+				if not(chain(self.x+x*TSIZE*s,self.y,288)) then
 					break
 				end
 			end
@@ -262,7 +260,7 @@ Bomb={
 		
 		for s=-1,1,2 do
 			for y=1,self.range do
-				if chain(self.x,self.y+y*TSIZE*s,305) then
+				if not(chain(self.x,self.y+y*TSIZE*s,305)) then
 					break
 				end
 			end
@@ -278,7 +276,7 @@ Bomb={
 Bomb.mt.__index=Bomb
 
 function place_bomb(x,y,range)
-	if player.bombs>0 and mget(x//8,y//8)==GROUND_TILE and not(has_entities(x,y)) then
+	if player.bombs>0 and mget(x//8,y//8)==GROUND_TILE[1] and not(has_entities(x,y)) then
 		if player:take_bomb() then
 			local bomb=Bomb.place(x,y,range)
 			local cx=x//8
@@ -320,7 +318,7 @@ Upgrade={
 		end
 	end,
 	update=function(self,dt)
-		if self.visible==false and mget(self.x//8,self.y//8)==GROUND_TILE then
+		if self.visible==false and mget(self.x//8,self.y//8)==GROUND_TILE[1] then
 			self.visible=true
 		end
 		if self.visible and rect_col(player.rect, self.rect) then
@@ -548,9 +546,11 @@ function load_map(number)
 end
 
 function clear_map(dc,dr,w,h)
+  local i=1
 	for r=0,h-1 do
 		for c=0,w-1 do
-			mset(dc+c,dr+r,GROUND_TILE)
+			mset(dc+c,dr+r,GROUND_TILE[i])
+      i=i+1
 		end
 	end
 end
